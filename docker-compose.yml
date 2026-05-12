@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  u421_postgres:
+    image: postgres:15
+    container_name: u421_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - u421_pgdata:/var/lib/postgresql/data
+    networks:
+      - u421_network
+
+  u421_rabbitmq:
+    image: rabbitmq:3-management
+    container_name: u421_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: u421_rabbit
+      RABBITMQ_DEFAULT_PASS: u421_rabbit_pass
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - u421_network
+
+  u421_auth:
+    build: ./u421_auth
+    container_name: u421_auth
+    env_file: .env
+    ports:
+      - "3001:3001"
+    depends_on:
+      - u421_postgres
+    networks:
+      - u421_network
+
+  u421_event:
+    build: ./u421_event
+    container_name: u421_event
+    env_file: .env
+    ports:
+      - "3002:3002"
+    depends_on:
+      - u421_postgres
+      - u421_rabbitmq
+    networks:
+      - u421_network
+
+  u421_notification:
+    build: ./u421_notification
+    container_name: u421_notification
+    env_file: .env
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - u421_rabbitmq
+    networks:
+      - u421_network
+
+networks:
+  u421_network:
+    driver: bridge
+
+volumes:
+  u421_pgdata:
